@@ -1,5 +1,3 @@
-# main.tf
-
 # Bloco de configuração do Terraform e dos provedores necessários.
 terraform {
   required_providers {
@@ -22,14 +20,14 @@ provider "google" {
 
 # --- RECURSOS A SEREM CRIADOS ---
 
-# 1. Cria o Dataset no BigQuery. É aqui que o dbt vai salvar suas tabelas.
+# 1. Cria o Dataset no BigQuery
 resource "google_bigquery_dataset" "dbt_dataset" {
   dataset_id = var.dbt_dataset_id
   location   = var.region
   description = "Dataset para saídas do dbt, gerenciado via Terraform."
 }
 
-# 2. Cria a Conta de Serviço (a "identidade" do dbt).
+# 2. Cria a Conta de Serviço do dbt.
 resource "google_service_account" "dbt_runner" {
   account_id   = var.dbt_service_account_id
   display_name = "Service Account para dbt"
@@ -50,12 +48,12 @@ resource "google_project_iam_member" "dbt_bigquery_data_editor" {
   member  = "serviceAccount:${google_service_account.dbt_runner.email}"
 }
 
-# 4. Gera a chave de acesso (a "senha") para a Conta de Serviço.
+# 4. Gera a chave de acesso para a Conta de Serviço.
 resource "google_service_account_key" "dbt_runner_key" {
   service_account_id = google_service_account.dbt_runner.name
 }
 
-# 5. Salva a chave em um arquivo .json no seu computador local.
+# 5. Salva a chave em um arquivo .json.
 resource "local_file" "sa_key_file" {
   content  = base64decode(google_service_account_key.dbt_runner_key.private_key)
   filename = "${path.module}/.secret/dbt_key.json"

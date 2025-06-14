@@ -19,6 +19,6 @@ variable "dbt_dataset_id" {
 
 variable "dbt_service_account_id" {
   type        = string
-  description = "O nome curto (ID) para a nova conta de serviço do dbt."
+  description = "O nome curto (ID) para a conta de serviço do dbt."
   default     = "dbt-runner-terraform"
 }
