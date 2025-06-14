@@ -1,0 +1,13 @@
+# .gitignore
+
+# Arquivos de estado do Terraform (podem conter segredos)
+*.tfstate
+*.tfstate.*
+
+# Chave secreta da conta de serviço
+.secret/
+dbt_key.json
+
+# Arquivos de configuração do editor e do Terraform
+.terraform/
+*.tfvars
