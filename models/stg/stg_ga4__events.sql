@@ -1,74 +1,53 @@
--- models/staging/stg_ga4__events.sql
-
+-- CÓDIGO TEMPORÁRIO APENAS PARA A CARGA DA AMOSTRA DE DESENVOLVIMENTO
 {{
     config(
-        materialized='incremental',
-        partition_by={
-            "field": "event_date",
-            "data_type": "date",
-            "granularity": "day"
-        },
-        cluster_by = ["event_name", "user_pseudo_id"]
+        materialized='table'
     )
 }}
 
--- CTE para pivotar os parâmetros de eventos, transformando linhas em colunas.
-WITH event_params_pivoted AS (
-    SELECT
-        event_timestamp,
-        user_pseudo_id,
-        event_name,
-        -- Usamos agregações para pivotar as linhas de parâmetros de volta para colunas
-        MAX(IF(key = 'ga_session_id', value.int_value, NULL)) AS ga_session_id,
-        MAX(IF(key = 'page_location', value.string_value, NULL)) AS page_location,
-        MAX(IF(key = 'page_referrer', value.string_value, NULL)) AS page_referrer,
-        MAX(IF(key = 'engagement_time_msec', value.int_value, NULL)) AS engagement_time_msec
-    FROM
-        {{ ref('base_ga4__event_params') }}
-    GROUP BY 1, 2, 3
-)
-
--- Query principal que junta os eventos base com seus parâmetros pivotados
 SELECT
-    base.event_date,
-    base.event_timestamp,
-    base.event_name,
-    base.user_pseudo_id,
-    base.user_first_touch_timestamp,
+    -- Chaves e Timestamps
+    PARSE_DATE('%Y%m%d', event_date) AS event_date,
+    event_timestamp,
+    event_name,
+    user_pseudo_id,
+    user_first_touch_timestamp,
 
-    -- Colunas do JOIN com os parâmetros
-    params.ga_session_id,
-    params.page_location,
-    params.page_referrer,
-    params.engagement_time_msec,
+    -- Parâmetros extraídos do array event_params
+    (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'ga_session_id') AS ga_session_id,
+    (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'page_location') AS page_location,
+    (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'page_referrer') AS page_referrer,
+    (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'engagement_time_msec') AS engagement_time_msec,
 
-    -- Colunas que já estavam limpas no modelo base
-    base.device_category,
-    base.device_os,
-    base.browser,
-    base.country,
-    base.continent,
-    base.traffic_campaign,
-    base.traffic_medium,
-    base.traffic_source,
-    base.transaction_id,
-    base.purchase_revenue,
-    base.user_ltv_revenue,
-    base.items
+    -- Campos do struct de dispositivo (device)
+    device.category AS device_category,
+    device.operating_system AS operating_system,
+    device.operating_system_version AS operating_system_version,
+    device.web_info.browser AS browser,
+    device.language,
 
+    -- Campos do struct de geolocalização (geo)
+    geo.continent,
+    geo.country,
+    geo.region,
+    geo.city,
+
+    -- Campos do struct de e-commerce
+    ecommerce.transaction_id,
+    ecommerce.purchase_revenue,
+
+    -- Campos do struct de LTV do usuário
+    user_ltv.revenue AS user_ltv_revenue,
+
+    -- Campos do struct de fonte de tráfego
+    traffic_source.name AS traffic_campaign,
+    traffic_source.medium AS traffic_medium,
+    traffic_source.source AS traffic_source,
+
+    -- Mantemos o array de itens intacto para ser processado depois em um modelo específico para produtos.
+    items
 FROM
-    {{ ref('base_ga4__events') }} AS base
-LEFT JOIN
-    event_params_pivoted AS params
-    -- Chave de junção para trazer os parâmetros para o evento correto
-    ON base.event_timestamp = params.event_timestamp
-    AND base.user_pseudo_id = params.user_pseudo_id
-    AND base.event_name = params.event_name
-
-{% if is_incremental() %}
-
--- A lógica incremental agora filtra o modelo base, que por sua vez lê da fonte.
--- O otimizador do BigQuery aplicará este filtro diretamente na leitura da fonte particionada.
-WHERE base.event_date >= (SELECT MAX(event_date) FROM {{ this }})
-
-{% endif %}
+    {{ source('ga4_public_data', 'events') }}
+WHERE
+    -- O FILTRO CHAVE: processamos apenas os dados de um dia para nossa amostra!
+    _table_suffix = '20210131'
