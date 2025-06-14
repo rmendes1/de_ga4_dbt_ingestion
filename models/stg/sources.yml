@@ -1,0 +1,15 @@
+version: 2
+
+sources:
+  - name: ga4_public_data
+    description: "Dataset público do GA4 fornecido pelo Google, contendo dados ofuscados da Google Merchandise Store."
+
+    # Detalhes de localização da fonte no BigQuery
+    database: bigquery-public-data           # O ID do projeto GCP onde os dados estão
+    schema: ga4_obfuscated_sample_ecommerce  # O nome do dataset (schema) no BigQuery
+
+    # Lista de tabelas que pertencem a esta fonte.
+    tables:
+      - name: events  # O "apelido" que daremos a esta tabela dentro do dbt.
+        identifier: events_* # O nome real da tabela no BigQuery. O '*' é o wildcard para as tabelas diárias.
+        description: "Tabela particionada diariamente contendo todos os eventos brutos do GA4."
