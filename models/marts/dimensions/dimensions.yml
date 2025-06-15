@@ -1,0 +1,47 @@
+version: 2
+
+models:
+  - name: dim_devices
+    description: "Dimensão com uma linha por combinação única de dispositivo (categoria, SO, navegador)."
+    columns:
+      - name: device_key
+        description: "Chave primária (SK) da dimensão de dispositivos."
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_geo
+    description: "Dimensão com uma linha por combinação única de geolocalização."
+    columns:
+      - name: geo_key
+        description: "Chave primária da dimensão de geolocalização."
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_sessions
+    description: "Dimensão que resume cada sessão de usuário, incluindo a fonte de tráfego."
+    columns:
+      - name: session_key
+        description: "Chave primária da dimensão de sessões."
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_users
+    description: "Dimensão que contém uma linha por usuário único (user_pseudo_id)."
+    columns:
+      - name: user_key
+        description: "Chave primária da dimensão de usuários."
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_products
+    description: "Catálogo de produtos únicos que aparecem nos eventos."
+    columns:
+      - name: product_key
+        description: "Chave primária da dimensão de produtos."
+        tests:
+          - unique
+          - not_null
