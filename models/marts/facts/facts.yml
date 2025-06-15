@@ -2,19 +2,64 @@ version: 2
 
 models:
   - name: fct_events
-    description: "Tabela fato principal, com um registro por evento. Contém métricas e chaves para as dimensões."
+    description: "Tabela fato principal com um registro por evento. Contém as métricas e as chaves que conectam todas as dimensões, formando o centro do esquema estrela."
     columns:
       - name: event_key
-        description: "Chave primária da tabela fato."
+        description: "Chave primária (surrogate key) da tabela fato, identificando unicamente um evento."
         tests:
           - unique
           - not_null
 
-      - name: user_key
-        description: "Chave estrangeira para a dimensão de usuários (dim_users)."
+      - name: date_key
+        description: "Chave estrangeira para a dim_dates. Representa a data em que o evento ocorreu."
         tests:
           - not_null
-          # Este teste garante que cada user_key em fct_events existe na coluna user_key da dim_users.
+          - relationships:
+              to: ref('dim_dates')
+              field: date_day
+
+      - name: user_key
+        description: "Chave estrangeira para a dim_users. Identifica o usuário que realizou o evento."
+        tests:
+          - not_null
           - relationships:
               to: ref('dim_users')
               field: user_key
+
+      - name: session_key
+        description: "Chave estrangeira para a dim_sessions. Identifica a sessão em que o evento ocorreu."
+        tests:
+          - relationships: # Pode ser nulo se o evento não tiver um ga_session_id
+              to: ref('dim_sessions')
+              field: session_key
+
+      - name: geo_key
+        description: "Chave estrangeira para a dim_geo. Identifica a localização de onde o evento se originou."
+        tests:
+          - relationships:
+              to: ref('dim_geo')
+              field: geo_key
+
+      - name: device_key
+        description: "Chave estrangeira para a dim_devices. Identifica o dispositivo usado no evento."
+        tests:
+          - relationships:
+              to: ref('dim_devices')
+              field: device_key
+
+      - name: event_name
+        description: "Dimensão Degenerada. O nome do evento que ocorreu (ex: page_view, purchase)."
+        tests:
+          - not_null
+
+      - name: transaction_id
+        description: "Dimensão Degenerada. O ID da transação, presente apenas em eventos de 'purchase'."
+
+      - name: purchase_revenue
+        description: "Métrica. A receita associada a um evento de 'purchase'."
+
+      - name: engagement_time_msec
+        description: "Métrica. O tempo de engajamento do usuário em milissegundos, geralmente associado a eventos como 'user_engagement'."
+
+      - name: event_count
+        description: "Métrica. Um valor constante de 1 para facilitar a contagem de eventos."

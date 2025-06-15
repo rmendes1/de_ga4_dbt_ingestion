@@ -1,47 +1,106 @@
 version: 2
 
 models:
+  - name: dim_dates
+    description: "Dimensão de calendário gerada pelo pacote dbt_date. Contém uma linha para cada dia, enriquecida com múltiplos atributos de data para facilitar análises temporais."
+    columns:
+      - name: date_day
+        description: "Chave primária da tabela, representando um dia único."
+        tests:
+          - unique
+          - not_null
+
   - name: dim_devices
-    description: "Dimensão com uma linha por combinação única de dispositivo (categoria, SO, navegador)."
+    description: "Dimensão com uma linha por combinação única de dispositivo, sistema operacional e navegador. Descreve 'como' o usuário acessou."
     columns:
       - name: device_key
-        description: "Chave primária (SK) da dimensão de dispositivos."
+        description: "Chave primária (surrogate key) da dimensão de dispositivos."
         tests:
           - unique
           - not_null
+      - name: device_category
+        description: "Categoria do dispositivo (ex: desktop, mobile, tablet)."
+      - name: operating_system
+        description: "Sistema Operacional do dispositivo (ex: Windows, iOS, Android)."
+      - name: browser
+        description: "Navegador web utilizado na sessão (ex: Chrome, Safari)."
+      - name: language
+        description: "Idioma configurado no dispositivo/navegador do usuário."
 
   - name: dim_geo
-    description: "Dimensão com uma linha por combinação única de geolocalização."
+    description: "Dimensão com uma linha por combinação única de localização geográfica. Descreve 'de onde' o usuário acessou."
     columns:
       - name: geo_key
-        description: "Chave primária da dimensão de geolocalização."
+        description: "Chave primária (surrogate key) da dimensão de geolocalização."
         tests:
           - unique
           - not_null
-
-  - name: dim_sessions
-    description: "Dimensão que resume cada sessão de usuário, incluindo a fonte de tráfego."
-    columns:
-      - name: session_key
-        description: "Chave primária da dimensão de sessões."
-        tests:
-          - unique
-          - not_null
-
-  - name: dim_users
-    description: "Dimensão que contém uma linha por usuário único (user_pseudo_id)."
-    columns:
-      - name: user_key
-        description: "Chave primária da dimensão de usuários."
-        tests:
-          - unique
-          - not_null
+      - name: continent
+        description: "Continente associado ao acesso do usuário."
+      - name: country
+        description: "País associado ao acesso do usuário."
+      - name: region
+        description: "Região ou estado associado ao acesso do usuário."
+      - name: city
+        description: "Cidade associada ao acesso do usuário."
 
   - name: dim_products
-    description: "Catálogo de produtos únicos que aparecem nos eventos."
+    description: "Catálogo de produtos únicos (dimensão tipo 1). Contém uma linha para cada item_id distinto que aparece nos eventos de e-commerce."
     columns:
       - name: product_key
-        description: "Chave primária da dimensão de produtos."
+        description: "Chave primária (surrogate key) da dimensão de produtos."
         tests:
           - unique
           - not_null
+      - name: item_id
+        description: "Chave natural (SKU). Identificador único do produto."
+      - name: item_name
+        description: "Nome do produto. É selecionada a primeira variação encontrada para um item_id."
+      - name: item_brand
+        description: "Marca do produto."
+      - name: item_category
+        description: "Categoria principal do produto."
+      - name: item_category2
+        description: "Segunda categoria do produto."
+
+  - name: dim_sessions
+    description: "Dimensão que resume cada sessão de usuário, incluindo a fonte de tráfego de atribuição. O grão é uma linha por sessão."
+    columns:
+      - name: session_key
+        description: "Chave primária (surrogate key) da dimensão de sessões."
+        tests:
+          - unique
+          - not_null
+      - name: ga_session_id
+        description: "Chave natural. ID da sessão fornecido pelo Google Analytics."
+      - name: user_pseudo_id
+        description: "ID do usuário anônimo associado a esta sessão."
+      - name: session_start_timestamp
+        description: "Timestamp exato do primeiro evento da sessão."
+      - name: session_end_timestamp
+        description: "Timestamp exato do último evento da sessão."
+      - name: traffic_source
+        description: "A fonte de tráfego atribuída à sessão (ex: google, direct)."
+      - name: traffic_medium
+        description: "A mídia de tráfego atribuída à sessão (ex: organic, cpc, (none))."
+      - name: traffic_campaign
+        description: "A campanha de tráfego atribuída à sessão."
+
+  - name: dim_users
+    description: "Dimensão que contém uma linha por usuário único (user_pseudo_id), com informações sobre sua jornada e lifetime value."
+    columns:
+      - name: user_key
+        description: "Chave primária (surrogate key) da tabela, gerada a partir do user_pseudo_id."
+        tests:
+          - unique
+          - not_null
+      - name: user_pseudo_id
+        description: "Chave natural do usuário (ID do cliente do GA4) que o identifica de forma anônima."
+        tests:
+          - not_null
+      - name: first_seen_timestamp
+        description: "Timestamp de quando o usuário foi visto pela primeira vez."
+      - name: last_seen_timestamp
+        description: "Timestamp da última atividade registrada do usuário."
+      - name: total_ltv_revenue
+        description: "Receita de Lifetime Value (LTV) mais recente registrada para o usuário."
