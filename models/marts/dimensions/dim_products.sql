@@ -4,7 +4,8 @@
     )
 }}
 
-WITH all_products AS (
+-- CTE 1: Seleciona todos os produtos distintos, ainda com possíveis duplicatas de item_id
+WITH product_entries AS (
     SELECT DISTINCT
         item_id,
         item_name,
@@ -13,9 +14,18 @@ WITH all_products AS (
         item_category2,
         item_category3
     FROM
-        -- Agora lemos da nossa nova tabela de staging de itens!
         {{ ref('stg_ga4__items') }}
     WHERE item_id IS NOT NULL
+),
+
+-- CTE 2: Usa uma função de janela para desduplicar os produtos pelo item_id
+deduplicated_products AS (
+    SELECT
+        *,
+        -- Para cada item_id, numeramos as linhas. A primeira ocorrência recebe 1, a segunda 2, etc.
+        ROW_NUMBER() OVER(PARTITION BY item_id ORDER BY item_name) as row_num
+    FROM
+        product_entries
 )
 
 SELECT
@@ -27,4 +37,6 @@ SELECT
     item_category2,
     item_category3
 FROM
-    all_products
+    deduplicated_products
+WHERE
+    row_num = 1 -- Garantimos que estamos pegando apenas uma versão de cada produto
