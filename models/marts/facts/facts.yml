@@ -1,0 +1,20 @@
+version: 2
+
+models:
+  - name: fct_events
+    description: "Tabela fato principal, com um registro por evento. Contém métricas e chaves para as dimensões."
+    columns:
+      - name: event_key
+        description: "Chave primária da tabela fato."
+        tests:
+          - unique
+          - not_null
+
+      - name: user_key
+        description: "Chave estrangeira para a dimensão de usuários (dim_users)."
+        tests:
+          - not_null
+          # Este teste garante que cada user_key em fct_events existe na coluna user_key da dim_users.
+          - relationships:
+              to: ref('dim_users')
+              field: user_key
